@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><title>WAVoice Assistant Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d30;--line:#26364e;--muted:#9aabc2;--ink:#f4f7fb;--accent:#61d6b3;--blue:#7eb5ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#1b3651 0,transparent 35%),var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:25px max(20px,calc((100% - 1100px)/2));border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-weight:800;font-size:20px;letter-spacing:.2px}.brand span{color:var(--accent)}.tag{color:var(--muted);font-size:12px}
+main{max-width:1100px;margin:28px auto;padding:0 18px 60px}.intro{margin-bottom:22px}.intro h1{font-size:clamp(27px,5vw,40px);line-height:1.1;margin:0 0 10px}.intro p{color:var(--muted);max-width:700px;margin:0}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.panel{background:rgba(18,29,48,.94);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 12px 35px #0002}.panel h2{font-size:17px;margin:0 0 16px}.field{margin:0 0 15px}.field label{display:block;font-size:13px;font-weight:650;margin:0 0 6px}.hint{font-size:12px;color:var(--muted);margin-top:5px}
+input,select,textarea{width:100%;background:#0b1526;color:var(--ink);border:1px solid #34465f;border-radius:10px;padding:11px 12px;font:inherit;outline:none}textarea{min-height:115px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pill{display:inline-flex;border:1px solid var(--line);padding:5px 9px;border-radius:30px;color:var(--muted);font-size:11px}
+.preview{background:#0a1423;border:1px solid #2b4059;border-radius:13px;padding:16px;min-height:150px;white-space:pre-wrap}.preview strong{color:var(--accent);display:block;margin-bottom:8px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:10px;padding:11px 15px;font-weight:750;cursor:pointer;background:var(--accent);color:#06231c}button.secondary{background:#24364d;color:var(--ink);border:1px solid #3a506d}
+.note{border-left:3px solid #e7bd6c;padding:10px 12px;background:#302a1d55;color:#d8caa9;border-radius:0 9px 9px 0;font-size:12px;margin-top:14px}
+footer{color:var(--muted);font-size:12px;margin-top:18px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}header{padding:18px}.row{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><div class="brand">WAVoice <span>Studio</span></div><div class="tag">PERSONAL VOICE ASSISTANT · CONFIGURATION PREVIEW</div></header>
+<main><section class="intro"><h1>Shape the way your assistant speaks.</h1><p>Write its role, greeting and approved knowledge. Preview the instructions it should follow before connecting a live WhatsApp number.</p></section>
+<div class="grid">
+<section class="panel"><h2>Assistant profile</h2>
+<div class="field"><label for="name">Assistant name</label><input id="name" value="My WhatsApp Assistant" maxlength="60"></div>
+<div class="field"><label for="greeting">Opening greeting</label><textarea id="greeting">Hello! Thanks for calling. I'm the AI assistant. How can I help you today?</textarea></div>
+<div class="field"><label for="role">What should the assistant do?</label><textarea id="role">Be warm, respectful, clear and helpful. Answer callers' questions using only the approved information below. Keep spoken replies natural and concise.</textarea></div>
+<div class="field"><label for="knowledge">Approved information / knowledge</label><textarea id="knowledge" placeholder="Add business details, services, opening hours, FAQs, policies and other facts the assistant may use."></textarea><div class="hint">Only put information here that the assistant is allowed to share.</div></div>
+<div class="field"><label for="rules">Important rules</label><textarea id="rules">Never invent facts, prices, availability or promises. If you do not know, say so politely and offer a human callback. Do not request passwords, payment card details or verification codes.</textarea></div>
+</section>
+<section class="panel"><h2>Voice & conversation</h2>
+<div class="row"><div class="field"><label for="language">Preferred language</label><select id="language"><option value="auto">Detect caller language automatically</option><option>English</option><option>Turkish</option><option>Spanish</option><option>French</option><option>Arabic</option><option>Portuguese</option><option>Hausa</option><option>Yoruba</option><option>Igbo</option></select></div>
+<div class="field"><label for="voice">Gemini voice</label><select id="voice"><option>Puck</option><option>Charon</option><option>Kore</option><option>Fenrir</option><option>Aoede</option></select></div></div>
+<div class="field"><label for="style">Speaking style</label><select id="style"><option>Natural, warm and conversational</option><option>Professional and concise</option><option>Friendly and energetic</option><option>Calm and reassuring</option></select></div>
+<div class="field"><label for="handover">When should it hand over?</label><textarea id="handover">When the caller asks for a person, raises a complaint, discusses a sensitive issue, or asks for something outside the approved knowledge.</textarea></div>
+<h2 style="margin-top:22px">Instruction preview</h2><div class="preview" id="preview" aria-live="polite"></div>
+<div class="actions"><button id="copy">Copy assistant instructions</button><button class="secondary" id="save">Save draft on this device</button><button class="secondary" id="reset">Reset draft</button></div>
+<div class="note">This page is a profile editor and prompt preview only. It does not connect to WhatsApp, save API keys, deploy a server, or activate live calls. Draft data stays in this browser when you choose Save.</div>
+</section></div>
+<footer>WAVoice Studio · Keep API tokens and Meta credentials in server environment variables. Never paste secrets into this page or commit them to GitHub.</footer></main>
+<script>
+const ids=['name','greeting','role','knowledge','rules','language','voice','style','handover'];
+const el=id=>document.getElementById(id);
+function build(){return [
+'Assistant identity: '+el('name').value,
+'Greeting: '+el('greeting').value,
+'Role: '+el('role').value,
+'Approved knowledge: '+(el('knowledge').value.trim()||'No knowledge supplied yet. Do not guess.'),
+'Rules: '+el('rules').value,
+'Language: '+(el('language').value==='auto'?'Detect the caller language and reply in that same language.':'Prefer '+el('language').value+'; if the caller uses another language you can support, follow the caller.'),
+'Voice: '+el('voice').value+'. Speaking style: '+el('style').value+'.',
+'Handover: '+el('handover').value,
+'Conversation behavior: Listen carefully, answer one point at a time, remember context during this call, allow the caller to interrupt, and ask a brief clarifying question when needed. Identify yourself as an AI assistant; never pretend to be a human.'
+].join('\n\n')}
+function render(){el('preview').textContent=build()}
+ids.forEach(id=>el(id).addEventListener('input',render));render();
+el('copy').onclick=async()=>{try{await navigator.clipboard.writeText(build());el('copy').textContent='Copied!';setTimeout(()=>el('copy').textContent='Copy assistant instructions',1600)}catch(e){el('preview').focus();alert('Select and copy the preview text manually.')}};
+el('save').onclick=()=>{try{localStorage.setItem('wavoice-profile-v1',JSON.stringify(Object.fromEntries(ids.map(id=>[id,el(id).value]))));el('save').textContent='Draft saved';setTimeout(()=>el('save').textContent='Save draft on this device',1600)}catch(e){alert('Local storage is unavailable in this browser.')}};
+el('reset').onclick=()=>{if(!confirm('Reset the profile fields?'))return;localStorage.removeItem('wavoice-profile-v1');location.reload()};
+try{const saved=JSON.parse(localStorage.getItem('wavoice-profile-v1')||'null');if(saved){ids.forEach(id=>{if(saved[id]!==undefined)el(id).value=saved[id]});render()}}catch(e){}
+</script></body></html>
