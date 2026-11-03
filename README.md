@@ -27,9 +27,11 @@ Meta allows voice calling on WhatsApp Business numbers, but getting it connected
 
 ## Assistant profile dashboard
 
-A mobile-friendly assistant profile editor is available at [`dashboard/index.html`](dashboard/index.html). It lets you draft the assistant's greeting, role, approved knowledge, safety rules, language preference, Gemini voice, and human-handover guidance. It also provides a copyable instruction preview and optional browser-local draft saving.
+A mobile-friendly assistant dashboard is available at [`/dashboard`](dashboard/index.html) when the WAVoice server is running. It lets you configure the assistant's name, greeting, role, approved knowledge, safety rules, language policy, Gemini voice, speaking style, and human-handover guidance. It also previews the assistant instructions and can load/save the profile through the authenticated server API.
 
-**Note:** This is currently a local profile editor, not a live WhatsApp control panel. It does not yet persist settings to the Python server or activate calling. See [the dashboard guide](docs/assistant-profile-dashboard.md) for integration and security boundaries.
+To enable server saving, set a private `WAVOICE_DASHBOARD_TOKEN` and keep `WAVOICE_ASSISTANT_PROFILE_FILE` on persistent storage. Open `https://YOUR_SERVER/dashboard`, enter the token, then use **Load from server** and **Save to server**. The profile is applied to new calls and restored after restart. The dashboard is for configuring the default Gemini assistant; custom `@app.on_call` handlers remain developer-controlled.
+
+See [the dashboard guide](docs/assistant-profile-dashboard.md) for setup, persistence, and security details.
 
 ---
 
