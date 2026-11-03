@@ -11,14 +11,12 @@ import hmac
 import json
 import time
 from pathlib import Path
-from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, Optional
 
 MAX_WEBHOOK_BODY_SIZE = 1_048_576  # 1 MB max payload to protect against memory exhaustion DoS
 
 import aiohttp
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
-from pydantic import BaseModel, Field
 from pydantic import BaseModel, Field
 from loguru import logger
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
