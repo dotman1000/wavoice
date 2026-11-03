@@ -159,8 +159,24 @@ class WhatsAppVoiceApp:
         """Start the WhatsApp Voice AI server and tunnel synchronously."""
         port = port or self.config.port
 
-        # Default to Gemini Live agent if no custom pipeline was attached
-        handler = self._custom_handler or run_gemini_live_agent
+        # Default Gemini handler uses the server-side assistant profile.
+        # Custom @app.on_call handlers remain fully user-controlled.
+        if self._custom_handler:
+            handler = self._custom_handler
+        else:
+            profile = self.config
+            system_instruction = "\\n\\n".join([
+                f"You are {profile.assistant_name}, an AI voice assistant on WhatsApp. Be transparent that you are an AI; never pretend to be human.",
+                profile.assistant_role,
+                "Approved knowledge (the only source for business-specific facts):\\n" + (profile.assistant_knowledge.strip() or "No approved knowledge has been supplied. Do not guess."),
+                "Safety rules: " + profile.assistant_rules,
+                "Language policy: " + ("Detect the caller's language and reply in that same language whenever supported. If uncertain, ask which language they prefer." if profile.assistant_language.strip().lower() == "auto" else f"Prefer {profile.assistant_language}; if the caller speaks another supported language, reply in the caller's language."),
+                "Speaking style: " + profile.assistant_style,
+                "Human handover: " + profile.assistant_handover,
+                "Conversation: Keep replies natural and concise for speech. Listen carefully, retain context during this call, allow interruptions, and ask one brief clarifying question when needed. Do not claim to have transferred or arranged a callback unless that capability is actually available.",
+            ])
+            async def handler(connection, call):
+                await run_gemini_live_agent(connection, call, system_instruction=system_instruction, voice=profile.assistant_voice, greeting=profile.assistant_greeting)
         async def _startup_wrapper():
             if tunnel:
                 async def _background_setup():
