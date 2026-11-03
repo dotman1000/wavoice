@@ -9,6 +9,8 @@ Handles:
 import asyncio
 import hmac
 import json
+import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, Optional
@@ -88,41 +90,92 @@ class AssistantProfileUpdate(BaseModel):
     assistant_handover: str = Field(max_length=4000)
 
 
+PROFILE_FIELDS = (
+    "assistant_name", "assistant_greeting", "assistant_role", "assistant_knowledge",
+    "assistant_rules", "assistant_language", "assistant_voice", "assistant_style",
+    "assistant_handover",
+)
+
+
 def _require_dashboard_token(request: Request, cfg: Settings) -> None:
     """Protect profile access with a server-side bearer token."""
     expected = cfg.dashboard_token
     if not expected:
         raise HTTPException(status_code=503, detail="Dashboard API is disabled; configure WAVOICE_DASHBOARD_TOKEN.")
-    supplied = request.headers.get("authorization", "")
-    scheme, _, token = supplied.partition(" ")
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not token or not hmac.compare_digest(token, expected):
         raise HTTPException(status_code=401, detail="Invalid dashboard token.")
+
+
+def _profile_file(cfg: Settings) -> Path:
+    """Resolve the private profile file configured for this server."""
+    return Path(cfg.assistant_profile_file).expanduser().resolve()
+
+
+def _read_profile_file(cfg: Settings) -> dict:
+    path = _profile_file(cfg)
+    if not path.exists():
+        return {}
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(stored, dict):
+            raise ValueError("profile must be a JSON object")
+        return AssistantProfileUpdate(**stored).model_dump()
+    except (OSError, ValueError, TypeError) as exc:
+        raise RuntimeError(f"Could not read assistant profile file at {path}: {exc}") from exc
+
+
+def _load_assistant_profile(cfg: Settings) -> None:
+    """Overlay persisted dashboard fields on environment defaults at startup."""
+    for key, value in _read_profile_file(cfg).items():
+        setattr(cfg, key, value)
+
+
+def _write_profile_file(cfg: Settings, profile: dict) -> None:
+    """Atomically persist only allowlisted profile fields, never provider secrets."""
+    path = _profile_file(cfg)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.",
+            suffix=".tmp", delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            json.dump(profile, handle, ensure_ascii=False, indent=2)
+            handle.write("\\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        if os.name == "posix":
+            os.chmod(temp_path, 0o600)
+        os.replace(temp_path, path)
+        if os.name == "posix":
+            os.chmod(path, 0o600)
+    finally:
+        if temp_path and temp_path.exists():
+            temp_path.unlink()
 
 
 @router.get("/api/assistant-profile")
 async def get_assistant_profile(request: Request):
     cfg: Settings = getattr(request.app.state, "config", settings)
     _require_dashboard_token(request, cfg)
-    return {
-        "assistant_name": cfg.assistant_name,
-        "assistant_greeting": cfg.assistant_greeting,
-        "assistant_role": cfg.assistant_role,
-        "assistant_knowledge": cfg.assistant_knowledge,
-        "assistant_rules": cfg.assistant_rules,
-        "assistant_language": cfg.assistant_language,
-        "assistant_voice": cfg.assistant_voice,
-        "assistant_style": cfg.assistant_style,
-        "assistant_handover": cfg.assistant_handover,
-    }
+    return {key: getattr(cfg, key) for key in PROFILE_FIELDS}
 
 
 @router.put("/api/assistant-profile")
 async def update_assistant_profile(profile: AssistantProfileUpdate, request: Request):
     cfg: Settings = getattr(request.app.state, "config", settings)
     _require_dashboard_token(request, cfg)
-    for key, value in profile.model_dump().items():
+    values = profile.model_dump()
+    try:
+        _write_profile_file(cfg, values)
+    except OSError as exc:
+        logger.exception("Could not persist assistant profile")
+        raise HTTPException(status_code=500, detail="Could not save the profile file. Check server storage permissions.") from exc
+    for key, value in values.items():
         setattr(cfg, key, value)
-    return {"status": "saved", "message": "Profile updated in server memory. Restart the server or persist environment settings to keep changes after a restart."}
+    return {"status": "saved", "message": "Profile saved to the server and will be restored after restart."}
 
 
 @router.get("/dashboard", include_in_schema=False)
@@ -131,56 +184,6 @@ async def assistant_dashboard():
     if not dashboard_file.is_file():
         raise HTTPException(status_code=404, detail="Dashboard file is not included in this installation.")
     return FileResponse(dashboard_file, media_type="text/html")
-
-
-
-class AssistantProfileUpdate(BaseModel):
-    assistant_name: str = Field(max_length=60)
-    assistant_greeting: str = Field(max_length=2000)
-    assistant_role: str = Field(max_length=5000)
-    assistant_knowledge: str = Field(max_length=20000)
-    assistant_rules: str = Field(max_length=8000)
-    assistant_language: str = Field(max_length=40)
-    assistant_voice: str = Field(max_length=40)
-    assistant_style: str = Field(max_length=200)
-    assistant_handover: str = Field(max_length=4000)
-
-
-def _check_dashboard_access(request: Request, cfg: Settings) -> None:
-    expected = cfg.dashboard_token
-    if not expected:
-        raise HTTPException(status_code=503, detail="Configure WAVOICE_DASHBOARD_TOKEN to enable dashboard access.")
-    scheme, _, supplied = request.headers.get("authorization", "").partition(" ")
-    if scheme.lower() != "bearer" or not supplied or not hmac.compare_digest(supplied, expected):
-        raise HTTPException(status_code=401, detail="Dashboard authentication failed.")
-
-
-@router.get("/api/assistant-profile")
-async def read_assistant_profile(request: Request):
-    cfg: Settings = getattr(request.app.state, "config", settings)
-    _check_dashboard_access(request, cfg)
-    return {key: getattr(cfg, key) for key in (
-        "assistant_name", "assistant_greeting", "assistant_role", "assistant_knowledge",
-        "assistant_rules", "assistant_language", "assistant_voice", "assistant_style",
-        "assistant_handover",
-    )}
-
-
-@router.put("/api/assistant-profile")
-async def save_assistant_profile(profile: AssistantProfileUpdate, request: Request):
-    cfg: Settings = getattr(request.app.state, "config", settings)
-    _check_dashboard_access(request, cfg)
-    for key, value in profile.model_dump().items():
-        setattr(cfg, key, value)
-    return {"status": "saved", "message": "Saved in server memory; changes apply to new calls. Persist settings in the private server environment to retain them after restart."}
-
-
-@router.get("/dashboard", include_in_schema=False)
-async def show_dashboard():
-    path = Path(__file__).resolve().parents[3] / "dashboard" / "index.html"
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Dashboard file is unavailable in this installation.")
-    return FileResponse(path, media_type="text/html")
 
 
 @router.get("/webhook")
