@@ -13,6 +13,15 @@ def make_client(token: str | None = "test-dashboard-token", profile_file: str = 
     return TestClient(create_app(config=Settings(**config_values)))
 
 
+def test_dashboard_page_is_served(tmp_path):
+    client = make_client(profile_file=str(tmp_path / "profile.json"))
+
+    response = client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert "Assistant profile" in response.text or "assistant" in response.text.lower()
+
+
 def test_profile_api_is_disabled_without_dashboard_token(tmp_path):
     client = make_client(token=None, profile_file=str(tmp_path / "profile.json"))
 
