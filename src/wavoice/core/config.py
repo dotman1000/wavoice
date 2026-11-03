@@ -146,11 +146,9 @@ class Settings(BaseSettings):
         alias="TURN_PASSWORD",
     )
 
-    # Dashboard API access (set a long random value; never commit it)
-    dashboard_token: Optional[str] = Field(default=None, alias="WAVOICE_DASHBOARD_TOKEN")
-
     # Dashboard API access; configure only in the private server environment.
     dashboard_token: Optional[str] = Field(default=None, alias="WAVOICE_DASHBOARD_TOKEN")
+    assistant_profile_file: str = Field(default="data/assistant-profile.json", alias="WAVOICE_ASSISTANT_PROFILE_FILE", description="Private writable JSON file used to persist dashboard profile edits.")
 
     # Assistant profile (server-side environment configuration)
     assistant_name: str = Field(default="My WhatsApp Assistant", alias="WAVOICE_ASSISTANT_NAME")
