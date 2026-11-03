@@ -15,8 +15,8 @@ COPY dashboard ./dashboard
 COPY docs ./docs
 COPY LICENSE ./LICENSE
 RUN pip install --no-cache-dir . \
-    && install -d "$(python -c 'import pathlib, wavoice; print(pathlib.Path(wavoice.__file__).parent / \"dashboard\")')" \
-    && cp -R /app/dashboard/. "$(python -c 'import pathlib, wavoice; print(pathlib.Path(wavoice.__file__).parent / \"dashboard\")')/"
+    && install -d "$(python -c 'import pathlib, wavoice; print(str(pathlib.Path(wavoice.__file__).parent) + "/dashboard")')" \
+    && cp -R /app/dashboard/. "$(python -c 'import pathlib, wavoice; print(str(pathlib.Path(wavoice.__file__).parent) + "/dashboard")')/"
 
 # Run as an unprivileged user; mount persistent storage at /app/data.
 RUN useradd --create-home --uid 10001 wavoice \
