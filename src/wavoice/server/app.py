@@ -11,12 +11,14 @@ import hmac
 import json
 import time
 from pathlib import Path
+from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, Optional
 
 MAX_WEBHOOK_BODY_SIZE = 1_048_576  # 1 MB max payload to protect against memory exhaustion DoS
 
 import aiohttp
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 from pydantic import BaseModel, Field
 from loguru import logger
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
@@ -131,6 +133,56 @@ async def assistant_dashboard():
     if not dashboard_file.is_file():
         raise HTTPException(status_code=404, detail="Dashboard file is not included in this installation.")
     return FileResponse(dashboard_file, media_type="text/html")
+
+
+
+class AssistantProfileUpdate(BaseModel):
+    assistant_name: str = Field(max_length=60)
+    assistant_greeting: str = Field(max_length=2000)
+    assistant_role: str = Field(max_length=5000)
+    assistant_knowledge: str = Field(max_length=20000)
+    assistant_rules: str = Field(max_length=8000)
+    assistant_language: str = Field(max_length=40)
+    assistant_voice: str = Field(max_length=40)
+    assistant_style: str = Field(max_length=200)
+    assistant_handover: str = Field(max_length=4000)
+
+
+def _check_dashboard_access(request: Request, cfg: Settings) -> None:
+    expected = cfg.dashboard_token
+    if not expected:
+        raise HTTPException(status_code=503, detail="Configure WAVOICE_DASHBOARD_TOKEN to enable dashboard access.")
+    scheme, _, supplied = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not supplied or not hmac.compare_digest(supplied, expected):
+        raise HTTPException(status_code=401, detail="Dashboard authentication failed.")
+
+
+@router.get("/api/assistant-profile")
+async def read_assistant_profile(request: Request):
+    cfg: Settings = getattr(request.app.state, "config", settings)
+    _check_dashboard_access(request, cfg)
+    return {key: getattr(cfg, key) for key in (
+        "assistant_name", "assistant_greeting", "assistant_role", "assistant_knowledge",
+        "assistant_rules", "assistant_language", "assistant_voice", "assistant_style",
+        "assistant_handover",
+    )}
+
+
+@router.put("/api/assistant-profile")
+async def save_assistant_profile(profile: AssistantProfileUpdate, request: Request):
+    cfg: Settings = getattr(request.app.state, "config", settings)
+    _check_dashboard_access(request, cfg)
+    for key, value in profile.model_dump().items():
+        setattr(cfg, key, value)
+    return {"status": "saved", "message": "Saved in server memory; changes apply to new calls. Persist settings in the private server environment to retain them after restart."}
+
+
+@router.get("/dashboard", include_in_schema=False)
+async def show_dashboard():
+    path = Path(__file__).resolve().parents[3] / "dashboard" / "index.html"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Dashboard file is unavailable in this installation.")
+    return FileResponse(path, media_type="text/html")
 
 
 @router.get("/webhook")
