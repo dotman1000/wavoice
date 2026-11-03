@@ -6,23 +6,23 @@ from wavoice.core.config import Settings
 from wavoice.server.app import create_app
 
 
-def make_client(token: str | None = "test-dashboard-token") -> TestClient:
-    config_values = {}
+def make_client(token: str | None = "test-dashboard-token", profile_file: str = "data/assistant-profile.json") -> TestClient:
+    config_values = {"WAVOICE_ASSISTANT_PROFILE_FILE": profile_file}
     if token is not None:
         config_values["WAVOICE_DASHBOARD_TOKEN"] = token
     return TestClient(create_app(config=Settings(**config_values)))
 
 
-def test_profile_api_is_disabled_without_dashboard_token():
-    client = make_client(token=None)
+def test_profile_api_is_disabled_without_dashboard_token(tmp_path):
+    client = make_client(token=None, profile_file=str(tmp_path / "profile.json"))
 
     response = client.get("/api/assistant-profile")
 
     assert response.status_code == 503
 
 
-def test_profile_api_rejects_missing_or_invalid_bearer_token():
-    client = make_client()
+def test_profile_api_rejects_missing_or_invalid_bearer_token(tmp_path):
+    client = make_client(profile_file=str(tmp_path / "profile.json"))
 
     assert client.get("/api/assistant-profile").status_code == 401
     assert client.get(
@@ -31,8 +31,8 @@ def test_profile_api_rejects_missing_or_invalid_bearer_token():
     ).status_code == 401
 
 
-def test_profile_api_reads_only_assistant_profile_fields():
-    client = make_client()
+def test_profile_api_reads_only_assistant_profile_fields(tmp_path):
+    client = make_client(profile_file=str(tmp_path / "profile.json"))
 
     response = client.get(
         "/api/assistant-profile",
@@ -45,8 +45,9 @@ def test_profile_api_reads_only_assistant_profile_fields():
     assert "gemini_api_key" not in response.json()
 
 
-def test_profile_api_updates_allowlisted_fields_for_new_calls():
-    client = make_client()
+def test_profile_api_updates_allowlisted_fields_for_new_calls(tmp_path):
+    profile_file = tmp_path / "profile.json"
+    client = make_client(profile_file=str(profile_file))
     headers = {"Authorization": "Bearer test-dashboard-token"}
     profile = {
         "assistant_name": "Reception Assistant",
@@ -68,10 +69,15 @@ def test_profile_api_updates_allowlisted_fields_for_new_calls():
 
     assert loaded.status_code == 200
     assert loaded.json() == profile
+    assert profile_file.exists()
+    restarted_client = make_client(profile_file=str(profile_file))
+    restarted = restarted_client.get("/api/assistant-profile", headers=headers)
+    assert restarted.status_code == 200
+    assert restarted.json() == profile
 
 
-def test_profile_api_rejects_oversized_profile_fields():
-    client = make_client()
+def test_profile_api_rejects_oversized_profile_fields(tmp_path):
+    client = make_client(profile_file=str(tmp_path / "profile.json"))
     headers = {"Authorization": "Bearer test-dashboard-token"}
     profile = {
         "assistant_name": "x" * 61,
