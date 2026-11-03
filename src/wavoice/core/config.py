@@ -146,6 +146,17 @@ class Settings(BaseSettings):
         alias="TURN_PASSWORD",
     )
 
+    # Assistant profile (server-side environment configuration)
+    assistant_name: str = Field(default="My WhatsApp Assistant", alias="WAVOICE_ASSISTANT_NAME")
+    assistant_greeting: str = Field(default="Hello! Thanks for calling. I'm the AI assistant. How can I help you today?", alias="WAVOICE_ASSISTANT_GREETING")
+    assistant_role: str = Field(default="Be warm, respectful, clear and helpful. Keep spoken replies concise and natural.", alias="WAVOICE_ASSISTANT_ROLE")
+    assistant_knowledge: str = Field(default="", alias="WAVOICE_ASSISTANT_KNOWLEDGE")
+    assistant_rules: str = Field(default="Never invent facts, prices, availability or promises. If unsure, say so and offer a human callback. Never request passwords, payment card details or verification codes.", alias="WAVOICE_ASSISTANT_RULES")
+    assistant_language: str = Field(default="auto", alias="WAVOICE_ASSISTANT_LANGUAGE")
+    assistant_voice: str = Field(default="Puck", alias="WAVOICE_ASSISTANT_VOICE")
+    assistant_style: str = Field(default="Natural, warm and conversational", alias="WAVOICE_ASSISTANT_STYLE")
+    assistant_handover: str = Field(default="Offer a human callback when the caller requests a person, raises a complaint, discusses a sensitive issue, or asks about something outside approved knowledge.", alias="WAVOICE_ASSISTANT_HANDOVER")
+
     # Anonymous Usage Telemetry
     telemetry_enabled: bool = Field(
         default=True,
