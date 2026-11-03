@@ -9,3 +9,6 @@ dist/
 build/
 *.egg-info/
 .wa-voice/
+
+# Private dashboard profile data (contains business knowledge)
+data/assistant-profile.json
