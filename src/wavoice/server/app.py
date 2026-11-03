@@ -143,7 +143,7 @@ def _write_profile_file(cfg: Settings, profile: dict) -> None:
         ) as handle:
             temp_path = Path(handle.name)
             json.dump(profile, handle, ensure_ascii=False, indent=2)
-            handle.write("\\n")
+            handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
         if os.name == "posix":
