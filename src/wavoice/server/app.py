@@ -10,12 +10,14 @@ import asyncio
 import hmac
 import json
 import time
+from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, Optional
 
 MAX_WEBHOOK_BODY_SIZE = 1_048_576  # 1 MB max payload to protect against memory exhaustion DoS
 
 import aiohttp
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 from loguru import logger
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.transports.whatsapp.api import (
@@ -23,7 +25,7 @@ from pipecat.transports.whatsapp.api import (
     WhatsAppWebhookRequest,
 )
 from pipecat.transports.whatsapp.client import WhatsAppClient
-from starlette.responses import PlainTextResponse
+from starlette.responses import FileResponse, PlainTextResponse
 
 from wavoice.core.config import Settings, settings
 from wavoice.core.ice import build_ice_servers
@@ -70,6 +72,65 @@ def get_whatsapp_client(cfg: Settings) -> WhatsAppClient:
             whatsapp_secret=None,
         )
     return _whatsapp_client
+
+
+
+class AssistantProfileUpdate(BaseModel):
+    """Allowlisted, non-secret assistant settings editable from the dashboard."""
+    assistant_name: str = Field(max_length=60)
+    assistant_greeting: str = Field(max_length=2000)
+    assistant_role: str = Field(max_length=5000)
+    assistant_knowledge: str = Field(max_length=20000)
+    assistant_rules: str = Field(max_length=8000)
+    assistant_language: str = Field(max_length=40)
+    assistant_voice: str = Field(max_length=40)
+    assistant_style: str = Field(max_length=200)
+    assistant_handover: str = Field(max_length=4000)
+
+
+def _require_dashboard_token(request: Request, cfg: Settings) -> None:
+    """Protect profile access with a server-side bearer token."""
+    expected = cfg.dashboard_token
+    if not expected:
+        raise HTTPException(status_code=503, detail="Dashboard API is disabled; configure WAVOICE_DASHBOARD_TOKEN.")
+    supplied = request.headers.get("authorization", "")
+    scheme, _, token = supplied.partition(" ")
+    if scheme.lower() != "bearer" or not token or not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=401, detail="Invalid dashboard token.")
+
+
+@router.get("/api/assistant-profile")
+async def get_assistant_profile(request: Request):
+    cfg: Settings = getattr(request.app.state, "config", settings)
+    _require_dashboard_token(request, cfg)
+    return {
+        "assistant_name": cfg.assistant_name,
+        "assistant_greeting": cfg.assistant_greeting,
+        "assistant_role": cfg.assistant_role,
+        "assistant_knowledge": cfg.assistant_knowledge,
+        "assistant_rules": cfg.assistant_rules,
+        "assistant_language": cfg.assistant_language,
+        "assistant_voice": cfg.assistant_voice,
+        "assistant_style": cfg.assistant_style,
+        "assistant_handover": cfg.assistant_handover,
+    }
+
+
+@router.put("/api/assistant-profile")
+async def update_assistant_profile(profile: AssistantProfileUpdate, request: Request):
+    cfg: Settings = getattr(request.app.state, "config", settings)
+    _require_dashboard_token(request, cfg)
+    for key, value in profile.model_dump().items():
+        setattr(cfg, key, value)
+    return {"status": "saved", "message": "Profile updated in server memory. Restart the server or persist environment settings to keep changes after a restart."}
+
+
+@router.get("/dashboard", include_in_schema=False)
+async def assistant_dashboard():
+    dashboard_file = Path(__file__).resolve().parents[3] / "dashboard" / "index.html"
+    if not dashboard_file.is_file():
+        raise HTTPException(status_code=404, detail="Dashboard file is not included in this installation.")
+    return FileResponse(dashboard_file, media_type="text/html")
 
 
 @router.get("/webhook")
