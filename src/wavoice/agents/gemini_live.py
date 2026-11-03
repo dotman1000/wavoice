@@ -25,9 +25,10 @@ async def run_gemini_live_agent(
     ),
     voice: str = "Puck",
     greeting: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> None:
     """Execute the default Gemini 2.0 Flash Live speech-to-speech pipeline."""
-    api_key = settings.gemini_api_key or os.getenv("GOOGLE_API_KEY")
+    api_key = api_key or settings.gemini_api_key or os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError(
             "GEMINI_API_KEY or GOOGLE_API_KEY is required to run the default Gemini Live voice agent. "
