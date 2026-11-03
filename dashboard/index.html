@@ -21,6 +21,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <body>
 <header><div class="brand">WAVoice <span>Studio</span></div><div class="tag">PERSONAL VOICE ASSISTANT · CONFIGURATION PREVIEW</div></header>
 <main><section class="intro"><h1>Shape the way your assistant speaks.</h1><p>Write its role, greeting and approved knowledge. Preview the instructions it should follow before connecting a live WhatsApp number.</p></section>
+<section class="panel" style="margin-bottom:18px"><h2>Connect to your running WAVoice server</h2><div class="row"><div class="field"><label for="serverToken">Dashboard access token</label><input id="serverToken" type="password" autocomplete="off" placeholder="Enter the private server token"><div class="hint">Used only in this page session; it is not saved in browser storage.</div></div><div class="field" style="align-self:end"><div class="actions" style="margin-top:0"><button id="connect">Load from server</button><button class="secondary" id="serverSave">Save to server</button></div></div></div><div id="serverStatus" class="hint" aria-live="polite">Open this dashboard from your server at /dashboard. Configure WAVOICE_DASHBOARD_TOKEN in the server environment first.</div></section>
 <div class="grid">
 <section class="panel"><h2>Assistant profile</h2>
 <div class="field"><label for="name">Assistant name</label><input id="name" value="My WhatsApp Assistant" maxlength="60"></div>
@@ -36,11 +37,17 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <div class="field"><label for="handover">When should it hand over?</label><textarea id="handover">When the caller asks for a person, raises a complaint, discusses a sensitive issue, or asks for something outside the approved knowledge.</textarea></div>
 <h2 style="margin-top:22px">Instruction preview</h2><div class="preview" id="preview" aria-live="polite"></div>
 <div class="actions"><button id="copy">Copy assistant instructions</button><button class="secondary" id="save">Save draft on this device</button><button class="secondary" id="reset">Reset draft</button></div>
-<div class="note">This page is a profile editor and prompt preview only. It does not connect to WhatsApp, save API keys, deploy a server, or activate live calls. Draft data stays in this browser when you choose Save.</div>
+<div class="note">This page edits your assistant profile. Server sync updates the running server in memory for new calls; changes must also be persisted in the private server environment to survive a restart. It never handles WhatsApp credentials or AI API keys.</div>
 </section></div>
 <footer>WAVoice Studio · Keep API tokens and Meta credentials in server environment variables. Never paste secrets into this page or commit them to GitHub.</footer></main>
 <script>
 const ids=['name','greeting','role','knowledge','rules','language','voice','style','handover'];
+const serverFields={name:'assistant_name',greeting:'assistant_greeting',role:'assistant_role',knowledge:'assistant_knowledge',rules:'assistant_rules',language:'assistant_language',voice:'assistant_voice',style:'assistant_style',handover:'assistant_handover'};
+let dashboardToken='';
+function profilePayload(){return Object.fromEntries(ids.map(id=>[serverFields[id],el(id).value]))}
+function applyProfile(data){ids.forEach(id=>{const key=serverFields[id];if(data[key]!==undefined)el(id).value=data[key]});render()}
+async function serverRequest(method){const status=el('serverStatus');dashboardToken=el('serverToken').value.trim();if(!dashboardToken){status.textContent='Enter the dashboard token first.';return}status.textContent='Connecting…';try{const response=await fetch('/api/assistant-profile',{method,headers:{'Authorization':'Bearer '+dashboardToken,'Content-Type':'application/json'},...(method==='PUT'?{body:JSON.stringify(profilePayload())}:{})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.detail||('HTTP '+response.status));if(method==='GET')applyProfile(data);status.textContent=method==='GET'?'Profile loaded from server.':(data.message||'Profile saved.');}catch(error){status.textContent='Could not connect: '+error.message+'. Open /dashboard on the same WAVoice server and check its token.'}}
+
 const el=id=>document.getElementById(id);
 function build(){return [
 'Assistant identity: '+el('name').value,
@@ -55,6 +62,8 @@ function build(){return [
 ].join('\n\n')}
 function render(){el('preview').textContent=build()}
 ids.forEach(id=>el(id).addEventListener('input',render));render();
+el('connect').onclick=()=>serverRequest('GET');
+el('serverSave').onclick=()=>serverRequest('PUT');
 el('copy').onclick=async()=>{try{await navigator.clipboard.writeText(build());el('copy').textContent='Copied!';setTimeout(()=>el('copy').textContent='Copy assistant instructions',1600)}catch(e){el('preview').focus();alert('Select and copy the preview text manually.')}};
 el('save').onclick=()=>{try{localStorage.setItem('wavoice-profile-v1',JSON.stringify(Object.fromEntries(ids.map(id=>[id,el(id).value]))));el('save').textContent='Draft saved';setTimeout(()=>el('save').textContent='Save draft on this device',1600)}catch(e){alert('Local storage is unavailable in this browser.')}};
 el('reset').onclick=()=>{if(!confirm('Reset the profile fields?'))return;localStorage.removeItem('wavoice-profile-v1');location.reload()};
