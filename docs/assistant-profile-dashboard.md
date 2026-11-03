@@ -28,3 +28,22 @@ The current Gemini Live agent in `src/wavoice/agents/gemini_live.py` accepts `sy
 ## Open locally
 
 Open `dashboard/index.html` in a modern browser. It is designed to work on mobile screens and does not require a build step.
+
+
+## Connecting the profile to live Gemini calls
+
+The default Gemini Live runtime now reads these server-side settings from the private `.env` file:
+
+- `WAVOICE_ASSISTANT_NAME`
+- `WAVOICE_ASSISTANT_GREETING`
+- `WAVOICE_ASSISTANT_ROLE`
+- `WAVOICE_ASSISTANT_KNOWLEDGE`
+- `WAVOICE_ASSISTANT_RULES`
+- `WAVOICE_ASSISTANT_LANGUAGE` (use `auto` to match the caller)
+- `WAVOICE_ASSISTANT_VOICE`
+- `WAVOICE_ASSISTANT_STYLE`
+- `WAVOICE_ASSISTANT_HANDOVER`
+
+Copy the example values from `.env.example` into the private server `.env` and edit them there. Restart WAVoice after changing them. The browser dashboard's local draft is not yet synchronized with the server; copying its instruction preview does not automatically configure a live call.
+
+The automatic language policy is an instruction to Gemini, not a guarantee of perfect language detection. Validate every target language with real calls before relying on it. Voice names must be supported by the selected Gemini Live model.
