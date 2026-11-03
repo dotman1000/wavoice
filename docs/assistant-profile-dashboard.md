@@ -1,49 +1,36 @@
 # Assistant profile and dashboard
 
-The first personalization milestone adds a static, mobile-friendly dashboard at `dashboard/index.html`.
+WAVoice includes a mobile-friendly dashboard at `/dashboard` for configuring the default Gemini Live assistant.
 
-## What it does
+## Configure access
 
-- Edits the assistant name, opening greeting, role, approved knowledge and safety rules.
-- Selects a preferred language or automatic caller-language matching.
-- Selects one of the built-in Gemini voice names and a speaking style.
-- Defines when the assistant should offer a human handover.
-- Builds a complete instruction preview that can be copied.
-- Saves a local draft in the browser only when the user taps **Save draft on this device**.
+Set these values in the private server environment (never commit real values):
 
-## Important limitations
+- `WAVOICE_DASHBOARD_TOKEN`: a long, random bearer token required by the profile API.
+- `WAVOICE_ASSISTANT_PROFILE_FILE`: optional path to the private JSON profile file. It defaults to `data/assistant-profile.json`.
 
-This dashboard is a configuration editor, not a live control panel yet. It does not write settings to the Python server, connect to Meta, answer calls, or store API credentials. Browser-local drafts do not sync between devices.
+The server creates the parent directory when saving. On POSIX systems it writes the file with owner-only permissions (0600), using an atomic replacement to avoid partially written profiles. The file contains only the allowlisted assistant profile fields, not Meta credentials or provider API keys. The default file is ignored by Git.
 
-The current Gemini Live agent in `src/wavoice/agents/gemini_live.py` accepts `system_instruction`, `voice`, and `greeting` parameters, but the current server startup path must be wired to a trusted server-side profile store before dashboard changes can affect real calls.
+## Use the dashboard
 
-## Security and deployment
+1. Start the WAVoice server and open `https://YOUR_SERVER/dashboard`.
+2. Enter the dashboard token.
+3. Choose **Load from server** to load the current profile.
+4. Edit the assistant name, greeting, role, approved knowledge, safety rules, language, Gemini voice, speaking style and handover guidance.
+5. Choose **Save to server**. The server confirms only after the profile file has been written.
 
-- Never put Meta access tokens, app secrets, or provider API keys in browser code or commit them to Git.
-- Keep credentials in server environment variables or a managed secret store.
-- Before public deployment, add authentication, CSRF protection for write endpoints, server-side validation, and per-account authorization.
-- Do not expose caller audio, phone numbers, or conversation transcripts in a public dashboard.
-- Tell callers they are speaking with an AI assistant. Offer a human callback for unknown, sensitive, or disputed matters.
+The saved profile is loaded when the server starts and applies to new calls. Existing calls keep the instructions with which they started. Keep the configured profile file on persistent storage: some hosting platforms erase local files when an instance is replaced or redeployed. For multiple server instances, configure a shared persistent store or keep instances synchronized.
 
-## Open locally
+## Security
 
-Open `dashboard/index.html` in a modern browser. It is designed to work on mobile screens and does not require a build step.
+- Use HTTPS. Treat the dashboard token like a password and never paste it into chat or commit it to Git.
+- Keep Meta access tokens, app secrets and AI provider keys in environment variables or a managed secret store.
+- Restrict dashboard access at the network or identity-provider layer where possible. The bearer token protects the API, but it is not a substitute for HTTPS, CSRF defenses, rate limiting or per-user authorization in a public multi-user deployment.
+- Do not place passwords, payment card details, verification codes or unnecessary personal data in assistant knowledge.
+- The assistant should identify itself as AI, use only approved knowledge for business-specific facts and offer a human handover when uncertain.
 
+## Assistant behavior
 
-## Connecting the profile to live Gemini calls
+The default Gemini Live handler uses this profile to construct its system instruction and opening greeting. Automatic language matching is an instruction to the model, not a guarantee of perfect detection. Test every language and voice with real calls before relying on them. Voice availability depends on the selected Gemini Live model.
 
-The default Gemini Live runtime now reads these server-side settings from the private `.env` file:
-
-- `WAVOICE_ASSISTANT_NAME`
-- `WAVOICE_ASSISTANT_GREETING`
-- `WAVOICE_ASSISTANT_ROLE`
-- `WAVOICE_ASSISTANT_KNOWLEDGE`
-- `WAVOICE_ASSISTANT_RULES`
-- `WAVOICE_ASSISTANT_LANGUAGE` (use `auto` to match the caller)
-- `WAVOICE_ASSISTANT_VOICE`
-- `WAVOICE_ASSISTANT_STYLE`
-- `WAVOICE_ASSISTANT_HANDOVER`
-
-Copy the example values from `.env.example` into the private server `.env` and edit them there. Restart WAVoice after changing them. The browser dashboard's local draft is not yet synchronized with the server; copying its instruction preview does not automatically configure a live call.
-
-The automatic language policy is an instruction to Gemini, not a guarantee of perfect language detection. Validate every target language with real calls before relying on it. Voice names must be supported by the selected Gemini Live model.
+Custom handlers registered with `@app.on_call` remain under the application developer's control and do not automatically consume this default profile.
