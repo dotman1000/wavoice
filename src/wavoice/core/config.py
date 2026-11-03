@@ -146,6 +146,9 @@ class Settings(BaseSettings):
         alias="TURN_PASSWORD",
     )
 
+    # Dashboard API access (set a long random value; never commit it)
+    dashboard_token: Optional[str] = Field(default=None, alias="WAVOICE_DASHBOARD_TOKEN")
+
     # Assistant profile (server-side environment configuration)
     assistant_name: str = Field(default="My WhatsApp Assistant", alias="WAVOICE_ASSISTANT_NAME")
     assistant_greeting: str = Field(default="Hello! Thanks for calling. I'm the AI assistant. How can I help you today?", alias="WAVOICE_ASSISTANT_GREETING")
