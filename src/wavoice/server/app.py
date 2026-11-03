@@ -360,6 +360,7 @@ async def _handle_connect_event(
             raw_body=raw_body,
         )
     except Exception as e:
+        err_str = str(e).lower()
         err_type = "token_expired" if ("190" in err_str or "expire" in err_str or "session has expired" in err_str) else "webrtc_error"
         if err_type == "token_expired":
             logger.critical(f"❌ [Call {call_id}] Failed to answer call: Meta Access Token has EXPIRED! Please refresh your token.")
