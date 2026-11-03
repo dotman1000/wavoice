@@ -3,7 +3,7 @@
 from fastapi.testclient import TestClient
 
 from wavoice.core.config import Settings
-from wavoice.server.app import create_app
+from wavoice.server.app import create_app, load_assistant_profile
 
 
 def make_client(token: str | None = "test-dashboard-token", profile_file: str = "data/assistant-profile.json") -> TestClient:
@@ -94,3 +94,28 @@ def test_profile_api_rejects_oversized_profile_fields(tmp_path):
     response = client.put("/api/assistant-profile", headers=headers, json=profile)
 
     assert response.status_code == 422
+
+
+
+def test_saved_profile_loader_overlays_environment_defaults(tmp_path):
+    profile_file = tmp_path / "profile.json"
+    client = make_client(profile_file=str(profile_file))
+    headers = {"Authorization": "Bearer test-dashboard-token"}
+    profile = {
+        "assistant_name": "Persisted Reception",
+        "assistant_greeting": "Welcome back.",
+        "assistant_role": "Answer reception questions.",
+        "assistant_knowledge": "Office opens at nine.",
+        "assistant_rules": "Do not guess.",
+        "assistant_language": "auto",
+        "assistant_voice": "Kore",
+        "assistant_style": "Calm",
+        "assistant_handover": "Offer a staff callback.",
+    }
+    assert client.put("/api/assistant-profile", headers=headers, json=profile).status_code == 200
+
+    restarted_config = Settings(**{"WAVOICE_ASSISTANT_PROFILE_FILE": str(profile_file)})
+    load_assistant_profile(restarted_config)
+
+    assert restarted_config.assistant_name == "Persisted Reception"
+    assert restarted_config.assistant_voice == "Kore"
