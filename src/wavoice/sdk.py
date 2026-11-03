@@ -165,10 +165,10 @@ class WhatsAppVoiceApp:
             handler = self._custom_handler
         else:
             profile = self.config
-            system_instruction = "\\n\\n".join([
+            system_instruction = "\n\n".join([
                 f"You are {profile.assistant_name}, an AI voice assistant on WhatsApp. Be transparent that you are an AI; never pretend to be human.",
                 profile.assistant_role,
-                "Approved knowledge (the only source for business-specific facts):\\n" + (profile.assistant_knowledge.strip() or "No approved knowledge has been supplied. Do not guess."),
+                "Approved knowledge (the only source for business-specific facts):\n" + (profile.assistant_knowledge.strip() or "No approved knowledge has been supplied. Do not guess."),
                 "Safety rules: " + profile.assistant_rules,
                 "Language policy: " + ("Detect the caller's language and reply in that same language whenever supported. If uncertain, ask which language they prefer." if profile.assistant_language.strip().lower() == "auto" else f"Prefer {profile.assistant_language}; if the caller speaks another supported language, reply in the caller's language."),
                 "Speaking style: " + profile.assistant_style,
