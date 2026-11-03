@@ -424,5 +424,6 @@ def create_app(
     app.state.startup_fn = startup_fn
     app.state.shutdown_fn = shutdown_fn
     app.state.config = config or settings
+    _load_assistant_profile(app.state.config)
     app.include_router(router)
     return app
