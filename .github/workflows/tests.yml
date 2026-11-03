@@ -1,0 +1,26 @@
+name: Python tests
+
+on:
+  push:
+    branches:
+      - main
+      - feature/assistant-personalization
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project and test dependencies
+        run: uv sync --group dev
+      - name: Run test suite
+        run: uv run pytest
