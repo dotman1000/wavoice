@@ -125,7 +125,7 @@ def _read_profile_file(cfg: Settings) -> dict:
         raise RuntimeError(f"Could not read assistant profile file at {path}: {exc}") from exc
 
 
-def _load_assistant_profile(cfg: Settings) -> None:
+def load_assistant_profile(cfg: Settings) -> None:
     """Overlay persisted dashboard fields on environment defaults at startup."""
     for key, value in _read_profile_file(cfg).items():
         setattr(cfg, key, value)
@@ -424,6 +424,6 @@ def create_app(
     app.state.startup_fn = startup_fn
     app.state.shutdown_fn = shutdown_fn
     app.state.config = config or settings
-    _load_assistant_profile(app.state.config)
+    load_assistant_profile(app.state.config)
     app.include_router(router)
     return app
