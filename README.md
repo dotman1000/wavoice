@@ -25,6 +25,14 @@ Meta allows voice calling on WhatsApp Business numbers, but getting it connected
 
 ---
 
+## Assistant profile dashboard
+
+A mobile-friendly assistant profile editor is available at [`dashboard/index.html`](dashboard/index.html). It lets you draft the assistant's greeting, role, approved knowledge, safety rules, language preference, Gemini voice, and human-handover guidance. It also provides a copyable instruction preview and optional browser-local draft saving.
+
+**Note:** This is currently a local profile editor, not a live WhatsApp control panel. It does not yet persist settings to the Python server or activate calling. See [the dashboard guide](docs/assistant-profile-dashboard.md) for integration and security boundaries.
+
+---
+
 ## Pick your platform
 
 Choose the tool you are using and run the command in your terminal:
