@@ -180,8 +180,13 @@ async def update_assistant_profile(profile: AssistantProfileUpdate, request: Req
 
 @router.get("/dashboard", include_in_schema=False)
 async def assistant_dashboard():
-    dashboard_file = Path(__file__).resolve().parents[3] / "dashboard" / "index.html"
-    if not dashboard_file.is_file():
+    source_tree_dashboard = Path(__file__).resolve().parents[3] / "dashboard" / "index.html"
+    installed_dashboard = Path(__file__).resolve().parents[1] / "dashboard" / "index.html"
+    dashboard_file = next(
+        (candidate for candidate in (source_tree_dashboard, installed_dashboard) if candidate.is_file()),
+        None,
+    )
+    if dashboard_file is None:
         raise HTTPException(status_code=404, detail="Dashboard file is not included in this installation.")
     return FileResponse(dashboard_file, media_type="text/html")
 
