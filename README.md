@@ -247,6 +247,7 @@ To disable telemetry, you can:
 - [LiveKit Cloud Guide](docs/livekit.md)
 - [Dograh Cloud Guide](docs/dograh.md)
 - [Pipecat / Custom Python Guide](docs/pipecat.md)
+- [Docker production deployment guide](docs/deployment-docker.md)
 
 ---
 
