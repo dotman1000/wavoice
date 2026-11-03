@@ -17,7 +17,7 @@ from wavoice.agents.gemini_live import run_gemini_live_agent
 from wavoice.core.config import Settings, settings
 from wavoice.core.meta import MetaGraphClient
 from wavoice.core.tunnel import CloudflareTunnel
-from wavoice.server.app import CallHandlerType, create_app
+from wavoice.server.app import CallHandlerType, create_app, load_assistant_profile
 
 
 class WhatsAppVoiceApp:
@@ -158,6 +158,8 @@ class WhatsAppVoiceApp:
     def run(self, tunnel: bool = True, port: Optional[int] = None) -> None:
         """Start the WhatsApp Voice AI server and tunnel synchronously."""
         port = port or self.config.port
+        # Load persisted dashboard edits before constructing the live-call prompt.
+        load_assistant_profile(self.config)
 
         # Default Gemini handler uses the server-side assistant profile.
         # Custom @app.on_call handlers remain fully user-controlled.
@@ -176,7 +178,7 @@ class WhatsAppVoiceApp:
                 "Conversation: Keep replies natural and concise for speech. Listen carefully, retain context during this call, allow interruptions, and ask one brief clarifying question when needed. Do not claim to have transferred or arranged a callback unless that capability is actually available.",
             ])
             async def handler(connection, call):
-                await run_gemini_live_agent(connection, call, system_instruction=system_instruction, voice=profile.assistant_voice, greeting=profile.assistant_greeting)
+                await run_gemini_live_agent(connection, call, system_instruction=system_instruction, voice=profile.assistant_voice, greeting=profile.assistant_greeting, api_key=profile.gemini_api_key)
         async def _startup_wrapper():
             if tunnel:
                 async def _background_setup():
