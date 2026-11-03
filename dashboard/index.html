@@ -37,7 +37,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <div class="field"><label for="handover">When should it hand over?</label><textarea id="handover">When the caller asks for a person, raises a complaint, discusses a sensitive issue, or asks for something outside the approved knowledge.</textarea></div>
 <h2 style="margin-top:22px">Instruction preview</h2><div class="preview" id="preview" aria-live="polite"></div>
 <div class="actions"><button id="copy">Copy assistant instructions</button><button class="secondary" id="save">Save draft on this device</button><button class="secondary" id="reset">Reset draft</button></div>
-<div class="note">This page edits your assistant profile. Server sync updates the running server in memory for new calls; changes must also be persisted in the private server environment to survive a restart. It never handles WhatsApp credentials or AI API keys.</div>
+<div class="note">This page edits your assistant profile. Server sync saves the profile to a private JSON file on the server. It is restored automatically after a restart. Keep the server's data directory on persistent storage. It never handles WhatsApp credentials or AI API keys.</div>
 </section></div>
 <footer>WAVoice Studio · Keep API tokens and Meta credentials in server environment variables. Never paste secrets into this page or commit them to GitHub.</footer></main>
 <script>
